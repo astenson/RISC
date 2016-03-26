@@ -1,0 +1,24 @@
+#! /usr/bin/vvp
+:ivl_version "0.9.7 " "(v0_9_7)";
+:vpi_time_precision + 0;
+:vpi_module "system";
+:vpi_module "v2005_math";
+:vpi_module "va_math";
+S_0x2307da0 .scope module, "mux" "mux" 2 1;
+ .timescale 0 0;
+L_0x2339a60 .functor NOT 1, C4<z>, C4<0>, C4<0>, C4<0>;
+L_0x2339b10 .functor AND 1, C4<z>, L_0x2339a60, C4<1>, C4<1>;
+L_0x2339c20 .functor AND 1, C4<z>, C4<z>, C4<1>, C4<1>;
+L_0x2339d00 .functor OR 1, L_0x2339b10, L_0x2339c20, C4<0>, C4<0>;
+v0x2307e90_0 .net "A", 0 0, C4<z>; 0 drivers
+v0x2339650_0 .net "B", 0 0, C4<z>; 0 drivers
+v0x23396f0_0 .net "C", 0 0, L_0x2339a60; 1 drivers
+v0x2339790_0 .net "D", 0 0, L_0x2339b10; 1 drivers
+v0x2339840_0 .net "E", 0 0, L_0x2339c20; 1 drivers
+v0x23398e0_0 .net "out", 0 0, L_0x2339d00; 1 drivers
+v0x23399c0_0 .net "sel", 0 0, C4<z>; 0 drivers
+# The file index is used to find the file name in the following table.
+:file_names 3;
+    "N/A";
+    "<interactive>";
+    "mux.v";
