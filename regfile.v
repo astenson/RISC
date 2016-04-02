@@ -1,10 +1,10 @@
 module regfile(clk, rs, rt, rd, data_in, A, B);
-	input [3:0] rs, rt, rd;
+	input [4:0] rs, rt, rd;
 	input [15:0 ] data_in;
 	output [15:0] A, B;
 	input clk;
 
-	wire [3:0] rs, rt, rd;
+	wire [4:0] rs, rt, rd;
 	wire [15:0] data_in;
 	wire [15:0] A, B;
 
