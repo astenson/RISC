@@ -1,7 +1,9 @@
 module clock(output clk);
   reg clk;
-  always begin
-    clk = 1'b0;
-    forever #10 clk = ~clk;
+  initial begin
+    repeat( 18 ) begin
+      clk = 1'b0;
+      #1000 clk = ~clk;
+    end
   end
 endmodule

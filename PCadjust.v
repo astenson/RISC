@@ -7,7 +7,7 @@ module PCadjust(input clk, input [15:0] PC, input [15:0] jumpAddr, input [1:0] s
   assign adjustedPC = temp;
   adder16bit add1(.A(PC),.B(four),.result(A));
   adder16bit add2(.A(A),.B(jumpAddr),.result(B));
-  always @ ( posedge clk ) begin
+  always @ ( negedge clk ) begin
     case (select)
       2'b00: begin temp = A; end
       2'b01: begin temp = jumpAddr; end
