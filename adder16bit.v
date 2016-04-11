@@ -1,5 +1,4 @@
 `include "full_adder.v"
-
 module adder16bit(input [15:0] A, input [15:0] B, output [15:0] result);
   wire [16:0] carry;
   assign carry[0] = 0;

@@ -12,7 +12,7 @@ module regfile(clk, rs, rt, rd, data_in, A, B);
 	assign A = temp_A;
 	assign B = temp_B;
 
-	reg [15:0] register[0:15];
+	reg [15:0] register[0:31];
 
 	initial begin
 		$readmemb("registers.txt",register);
