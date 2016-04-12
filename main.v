@@ -95,8 +95,8 @@ module ALU16bit(input [15:0] A, input [15:0] B, input [3:0] control, output [15:
 		and(overflow,temp2,control[1]);
 endmodule
 
-module dataMem(input clk, input write, input read, input [3:0] rdAddr, input [3:0] wrAddr, input [15:0] data_in, output [15:0] data_out);
-  reg [31:0] temp_data;
+module dataMem(input clk, input write, input read, input [15:0] Addr, input [15:0] data_in, output [15:0] data_out);
+  reg [15:0] temp_data;
   assign data_out = temp_data;
 
   reg [7:0] data[0:71];
@@ -107,14 +107,14 @@ module dataMem(input clk, input write, input read, input [3:0] rdAddr, input [3:
 
   always @ ( posedge clk ) begin
     if (read == 1) begin
-      temp_data[15:8] <= data[rdAddr];
-      temp_data[7:0] <= data[rdAddr + 1];
+      temp_data[15:8] <= data[Addr];
+      temp_data[7:0] <= data[Addr + 1];
     end
   end
   always @ ( negedge clk ) begin
     if (write == 1) begin
-      data[wrAddr] <= data_in[15:8];
-      data[wrAddr + 1] <= data_in[7:0];
+      data[Addr] <= data_in[15:8];
+      data[Addr + 1] <= data_in[7:0];
     end
   end
 endmodule
@@ -222,39 +222,207 @@ endmodule
 module control;
 	wire clk, overflow;
 	reg [1:0] mux2Select;
-  wire [15:0] temp_PC, rdData1, rdData2, ALUIn, writeRegData, PCplus4, jumpAddr, ALUResult, branchAddr;
-	reg RegWrite, ALUSrc, PCSrc, MemRead, MemWrite, MemtoReg;
+  wire [15:0] temp_PC, rdData1, rdData2, ALUIn, writeRegData, PCplus4, jumpAddr, ALUResult, branchAddr, rdDataMem;
+	reg RegWrite, ALUSrc, PCSrc, MemRead, MemWrite, MemtoReg, half; //if loading half then half = 1, if loading byte half = 0
 	reg [3:0] ALUOpCode;
 	reg [15:0] PC = 16'b0000_0000_0000_0000;
 	reg [15:0] four = 16'b0000_0000_0000_0100;
 	wire [31:0] instruction;
 	reg [5:0] opcode, funct;
+	reg [4:0] writeAddr;
 
 	clock clk1(.clk(clk));
 	instructMem instruct(clk, PC, instruction);
 	adder16bit adder1(PC, four, PCplus4);
-	regfile regRead(clk, instruction[25:21], instruction[20:16], instruction[15:11], writeRegData, rdData1, rdData2);
+	regfile regRead(clk, instruction[25:21], instruction[20:16], writeAddr, writeRegData, rdData1, rdData2);
 	mux16bit mux1(ALUSrc, instruction[15:0], rdData2, ALUIn);
 	shiftLeft shift1(instruction[15:0], jumpAddr);
 	ALU16bit alu1(rdData1, ALUIn, ALUOpCode, ALUResult, overflow);
 	adder16bit adder2(PCplus4, jumpAddr, branchAddr);
 	mux3to1 mux2(mux2Select, PCplus4, jumpAddr, branchAddr, temp_PC);
+	dataMem data(clk, MemWrite, MemRead, ALUResult, rdData2, rdDataMem);
+	mux16bit mux3(MemtoReg, rdDataMem, ALUResult, writeRegData);
 	always @ ( posedge clk ) begin
 		mux2Select = 2'b00;
 		ALUSrc = 1'b1;
+		MemtoReg = 1;
 		funct = instruction[5:0];
+		case (opcode)
+			6'b00_0000 : begin //R-type instructions
+											funct = instruction[5:0];
+											PCSrc = 1'b0;
+											ALUSrc = 1'b1;
+											MemRead = 1'b0;
+											MemWrite = 1'b0;
+											MemtoReg = 1'b1;
+											writeAddr = instruction[15:11];
+									 end
+			6'b00_1000 : begin //addi
+											funct = 6'b10_0000;
+											PCSrc = 1'b0;
+											ALUSrc = 1'b0;
+											MemRead = 1'b0;
+											MemWrite = 1'b0;
+											MemtoReg = 1'b1;
+											writeAddr = instruction[20:16];
+									 end
+			6'b00_1100 : begin //andi
+											funct = 6'b10_0100;
+											PCSrc = 1'b0;
+											ALUSrc = 1'b0;
+											MemRead = 1'b0;
+											MemWrite = 1'b0;
+											MemtoReg = 1'b1;
+											writeAddr = instruction[20:16];
+									 end
+			6'b00_1101 : begin //ori
+											funct = 6'b10_0101;
+											PCSrc = 1'b0;
+											ALUSrc = 1'b0;
+											MemRead = 1'b0;
+											MemWrite = 1'b0;
+											MemtoReg = 1'b1;
+											writeAddr = instruction[20:16];
+									 end
+			6'b00_1111 : begin //lui
+											funct = 6'b10_0000;
+											PCSrc = 1'b0;
+											ALUSrc = 1'b0;
+											MemRead = 1'b0;
+											MemWrite = 1'b0;
+											MemtoReg = 1'b1;
+											writeAddr = instruction[20:16];
+									 end
+				6'b00_1010 : begin //slti
+											funct = 6'b10_1010;
+											PCSrc = 1'b0;
+											ALUSrc = 1'b0;
+											MemRead = 1'b0;
+											MemWrite = 1'b0;
+											MemtoReg = 1'b1;
+											writeAddr = instruction[20:16];
+										 end
+				6'b00_0100 : begin //beq
+											funct = 6'b10_0010;
+											PCSrc = 1'b0;
+											ALUSrc = 1'b1;
+											MemRead = 1'b0;
+											MemWrite = 1'b0;
+											MemtoReg = 1'b1;
+											writeAddr = instruction[15:11];
+										 end
+				6'b00_0001 : begin //bqez
+ 										  funct = 6'b10_0010;
+ 											PCSrc = 1'b0;
+ 											ALUSrc = 1'b1;
+ 											MemRead = 1'b0;
+ 											MemWrite = 1'b0;
+ 											MemtoReg = 1'b1;
+ 											writeAddr = instruction[15:11];
+ 										 end
+				6'b00_0010 : begin //j
+				 							funct = 6'b10_0000;
+				 							PCSrc = 1'b1;
+				 							ALUSrc = 1'b1;
+				 							MemRead = 1'b0;
+				 							MemWrite = 1'b0;
+				 							MemtoReg = 1'b1;
+				 							writeAddr = instruction[15:11];
+				 						 end
+				6'b10_0000 : begin //lb
+ 											funct = 6'b10_0000;
+ 											PCSrc = 1'b0;
+ 											ALUSrc = 1'b0;
+ 											MemRead = 1'b1;
+ 											MemWrite = 1'b0;
+ 											MemtoReg = 1'b0;
+ 											writeAddr = instruction[20:16];
+											half = 1'b0;
+ 										 end
+			  6'b10_0001 : begin //lh
+											funct = 6'b10_0000;
+											PCSrc = 1'b0;
+											ALUSrc = 1'b0;
+											MemRead = 1'b1;
+											MemWrite = 1'b0;
+											MemtoReg = 1'b0;
+											writeAddr = instruction[20:16];
+											half = 1'b1;
+										 end
+				6'b10_1000 : begin //sb
+ 											funct = 6'b10_0000;
+ 											PCSrc = 1'b0;
+ 											ALUSrc = 1'b0;
+ 											MemRead = 1'b0;
+ 											MemWrite = 1'b1;
+ 											MemtoReg = 1'b0;
+ 											writeAddr = instruction[20:16];
+ 											half = 1'b0;
+ 										 end
+			  6'b10_1001 : begin //sb
+											funct = 6'b10_0000;
+											PCSrc = 1'b0;
+											ALUSrc = 1'b0;
+											MemRead = 1'b0;
+											MemWrite = 1'b1;
+											MemtoReg = 1'b0;
+											writeAddr = instruction[20:16];
+											half = 1'b1;
+										 end
+		endcase
     case (funct)
-      8'h20 : begin ALUOpCode = 4'b0001; end
-      8'h22 : begin ALUOpCode = 4'b0101; end
-      8'h24 : begin ALUOpCode = 4'b0000; end
-      8'h27 : begin ALUOpCode = 4'b1000; end
-      8'h25 : begin ALUOpCode = 4'b0010; end
-      8'h2a : begin ALUOpCode = 4'b0111; end
+      6'b10_0000 : begin ALUOpCode = 4'b0001; end
+      6'b10_0010 : begin ALUOpCode = 4'b0101; end
+      6'b10_0100 : begin ALUOpCode = 4'b0000; end
+      6'b10_0111 : begin ALUOpCode = 4'b1000; end
+      6'b10_0101 : begin ALUOpCode = 4'b0010; end
+      6'b10_1010 : begin ALUOpCode = 4'b0111; end
       default : begin ALUOpCode = 4'b0000; end
     endcase
-    $display("PC=%b PCplus4=%b jumpAddr=%b branchAddr=%b temp_PC=%b",PC,PCplus4,jumpAddr,branchAddr,temp_PC);
+    $display("PC=%b instruction=%b writeRegData=%b",PC,instruction,writeRegData);
   end
 	always @ ( negedge clk ) begin
+		case (opcode)
+			6'b00_0000 : begin //R-type instructions
+											RegWrite = 1'b1;
+									 end
+			6'b00_1000 : begin //addi
+											RegWrite = 1'b1;
+									 end
+			6'b00_1100 : begin //andi
+											RegWrite = 1'b1;
+									 end
+			6'b00_1101 : begin //ori
+											RegWrite = 1'b1;
+									 end
+			6'b00_1111 : begin //lui
+											RegWrite = 1'b1;
+									 end
+				6'b00_1010 : begin //slti
+											RegWrite = 1'b1;
+										 end
+				6'b00_0100 : begin //beq
+											RegWrite = 1'b0;
+										 end
+				6'b00_0001 : begin //bqez
+											RegWrite = 1'b0;
+										 end
+				6'b00_0010 : begin //j
+											RegWrite = 1'b0;
+										 end
+				6'b10_0000 : begin //lb
+											RegWrite = 1'b1;
+										 end
+				6'b10_0001 : begin //lh
+											RegWrite = 1'b1;
+										 end
+				6'b10_1000 : begin //sb
+											RegWrite = 1'b0;
+										 end
+				6'b10_1001 : begin //sb
+											RegWrite = 1'b0;
+										 end
+		endcase
 		PC = PCplus4;
 	end
 endmodule
