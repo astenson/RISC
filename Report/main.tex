@@ -17,34 +17,62 @@
 \begin{document}
 
   \input{./titlepage.tex}
-  
+
   \begin{abstract}
   In this lab I simulated a single-cycle 16 bit RISC processor in a mostly structural fashion. In total 26 instructions were implemented.
   \end{abstract}
 
-  \section{Introduction}
-
   \section{Single-Cycle Implementation}
+
+  The single cycle processor was implemented using 21 modules. Each module, what they do, and how they were implemented (behaviorally or structurally) is listed below.
+
+  \begin{enumerate}
+      \item full\_adder - Single bit full adder for use in the ALU and the adder units. Implemented structurally.
+      \item multiply - Multiplies two 16-bit numbers and outputs to high and low registers. Implemented behaviorally.
+      \item division - Divides two 16-bit numbers and outputs to high and low registers. Implemented behaviorally.
+      \item sll - Shifts the input number to the left a given number of bits. Implemented behaviorally.
+      \item srl - Shifts the input number to the left a given number of bits. Implemented behaviorally.
+      \item clock - Behavior implementation that has a frequency of 100ns and for the purpose of the general testbench only runs for 26 cycles.
+      \item mux - Single bit 2-to-1 multiplexer used in the ALU. Implemented structurally.
+      \item adder32bit - Adds two 32-bit numbers together. Used in the datapath that increments the PC. Implemented structurally.
+      \item ALU - Single bit ALU unit that performs six operations: and, or, nor, slt, add, sub. Implemented structurally.
+      \item ALU16bit - Uses the 1-bit ALU units to structurally implement a 16-bit ALU for the six operations listed above. Includes a behavioral implementation for the zero line needed in branch operations.
+      \item dataMem - Reads and write data for store and load commands. Implemented behaviorally.
+      \item instructMem - Reads 32-bit instructions from file in 8-bit chunks. Implemented behaviorally.
+      \item regfile - Reads and writes to the 16 16-bit registers. Implemented behaviorally.
+      \item shiftLeft - Shifts a 32-bit number left two bits, essentially multiplying it by four. Used in the PC incrementation datapath. Implemented structurally.
+      \item mux16bit - 16-bit 2-to-1 multiplexer implemented behaviorally.
+      \item mux6to1\_16bit - 16-bit 6-to-1 multiplexer implemented behaviorally.
+      \item mux3to1\_1ibt - Single bit 3-to-1 multiplexer implemented structurally.
+      \item mux3to1 - Uses the mux3ti1\_1bit unit to structurally implement a 32-bit 3-to-1 multiplexer used in the PC incrementation datapath.
+      \item padding16to32 - Adds bit padding to 16-bit numbers to make them 32-bit. Implemented structurally.
+      \item padding26to32 - Adds bit padding to 26-bit numbers to make them 32-bit. Implemented structurally.
+      \item control - Connects all the components together in a structural fashion. Assigns the controls lines behaviorally.
+  \end{enumerate}
 
   \section{Additional Instructions}
 
+  The 8 additional instructions from extra credit part 1 were implemented with the single cycle processor. Unfortunately, the multiply module does not function properly. No matter the input, there is not output from that behavioral module.
+
   \section{Test Bench}
 
-  All 26 instructions were tested in the same test bench code, the input instruction and the expected output is shown in the following table.
-
-    \begin{table}[h]
-      \centering
-      \begin{tabular}{|c|c|c|}
-       \hline
-       Instruction Type & Instruction Code (Hex) & Expected Output (Hex)\\
-       \hline\hline
-       and & & \\
-       \hline
-      \end{tabular}
-      \caption{Test Bench}
-      \label{tab:test_bench}
-    \end{table}
+  All 26 instructions were tested in the same test bench code. At the end of every clock cycle the verilog code will output the PC, instruction, and the writeRegData line. The writeRegData line is the 16-bit line from the 6-to-1 mux at the end of the datapath to the register file. For the R-type and some I-type instructions this shows the result of the calculation. For load commands this shows the data being pulled from memory. For store, branch, jump, multiply, and divide commands this lines doesn't represent the actually command result and will not be written to a register.
 
   \section{Factorial Code}
-
+     \begin{center}
+     \begin{tabular}{|rl|c|}
+         \hline
+         \multicolumn{2}{|c|}{Assembly Code} & Machine Code (Hex)\\
+         \hline\hline
+         & lui \$t0, 8 & 3C 08 00 08\\
+         & lui \$t1, 1 & 3C 09 00 01\\
+         & lui \$t2, 1 & 3C 0A 00 01\\
+         fact: & beq \$t0, \$t2, done & 11 0A 00 05\\
+         & mult \$t1, \$t0 & 04 A8 00 18\\
+         & mflo \$t1 & 00 00 48 12\\
+         & addi \$t0, \$t0, -1 & 42 10 FF FF\\
+         & j fact & 40 00 00 04\\
+         \hline
+     \end{tabular}
+     \end{center}
 \end{document}

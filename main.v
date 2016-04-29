@@ -1,17 +1,3 @@
-/*
-Master ToDo list:
-TODO add mux's before the mult and div units to decide between register input and shift amount
-TODO extend the mux at the end of the datapath to accept wires from the high and low registers
-TODO Implement division (div)
-TODO Implement mfhi
-TODO Implement mflo
-TODO Implement jr
-TODO Implement jal
-TODO Write factorial assembly code
-TODO Write factorial machine code into a new instruction memrory file
-TODO fix branch and jump errors
-*/
-
 module full_adder(x,y,cin,s,cout);
 	input x,y,cin;
 	output s,cout;
@@ -25,9 +11,9 @@ module full_adder(x,y,cin,s,cout);
 endmodule
 
 module multiply(input mult, input [15:0] A, input [15:0] B, output [15:0] high, output [15:0] low);
-	reg [31:0] temp;
+	reg signed [31:0] temp;
 	always @ (mult) begin
-		temp = A * B;
+		temp = A*B;
 	end
 	assign high = temp[31:16];
 	assign low = temp[15:0];
@@ -71,7 +57,7 @@ module clock(output clk);
   initial begin
     repeat( 26 ) begin
 			clk = 0;
-      #100 clk = !clk;
+      #10000 clk = !clk;
     end
   end
 endmodule
@@ -190,7 +176,7 @@ module dataMem(input write, input read, input [15:0] Addr, input [15:0] data_in,
   assign data_out = temp_data;
 	wire notHalf;
 
-  reg [7:0] data[0:71];
+  reg [7:0] data[0:360];
 
   initial begin
     $readmemb("data.txt",data);
@@ -230,7 +216,6 @@ module instructMem(input [31:0] addr, output [31:0] instruction);
     temp_instruct[7:0] <= instructions[addr + 3];
   end
 	assign instruction = temp_instruct;
-
 endmodule
 
 module regfile(read, write, rs, rt, rd, data_in, A, B);
@@ -415,7 +400,7 @@ module control;
 																			ALUSrc = 1'b0;
 																			MemRead = 1'b0;
 																			MemWrite = 1'b0;
-																			MemtoReg = 1'b0;
+																			MemtoReg = 3'b000;
 																			writeAddr = instruction[20:16];
 																			mux2Select = 2'b00;
 																			registerRead = 1'b1;
@@ -429,7 +414,7 @@ module control;
 																			ALUSrc = 1'b0;
 																			MemRead = 1'b0;
 																			MemWrite = 1'b0;
-																			MemtoReg = 1'b0;
+																			MemtoReg = 3'b000;
 																			writeAddr = instruction[20:16];
 																			mux2Select = 2'b00;
 																			registerRead = 1'b1;
@@ -443,7 +428,7 @@ module control;
 																			ALUSrc = 1'b0;
 																			MemRead = 1'b0;
 																			MemWrite = 1'b0;
-																			MemtoReg = 1'b0;
+																			MemtoReg = 3'b011;
 																			writeAddr = instruction[20:16];
 																			mux2Select = 2'b00;
 																			registerRead = 1'b0;
@@ -454,7 +439,29 @@ module control;
 																			ALUSrc = 1'b0;
 																			MemRead = 1'b0;
 																			MemWrite = 1'b0;
-																			MemtoReg = 1'b0;
+																			MemtoReg = 3'b100;
+																			writeAddr = instruction[20:16];
+																			mux2Select = 2'b00;
+																			registerRead = 1'b0;
+																			RegWrite = 1'b1;
+																		 end
+											  6'b00_0000 : begin //sll
+																			ALUOpCode = 4'b0001;
+																			ALUSrc = 1'b0;
+																			MemRead = 1'b0;
+																			MemWrite = 1'b0;
+																			MemtoReg = 3'b101;
+																			writeAddr = instruction[20:16];
+																			mux2Select = 2'b00;
+																			registerRead = 1'b0;
+																			RegWrite = 1'b1;
+																		 end
+											  6'b00_0010 : begin //srl
+																			ALUOpCode = 4'b0001;
+																			ALUSrc = 1'b0;
+																			MemRead = 1'b0;
+																			MemWrite = 1'b0;
+																			MemtoReg = 3'b110;
 																			writeAddr = instruction[20:16];
 																			mux2Select = 2'b00;
 																			registerRead = 1'b0;
@@ -530,10 +537,10 @@ module control;
 											MemWrite = 1'b0;
 											MemtoReg = 3'b001;
 											writeAddr = instruction[15:11];
-											//mux2Select[0] = 1'b0;
+											mux2Select[0] = 1'b0;
 											registerRead = 1'b1;
 											beq = 1'b1;
-											//mux2Select[1] = zero;
+											mux2Select[1] = zero;
 											mult = 1'b0;
 											div = 1'b0;
 										 end
@@ -544,10 +551,10 @@ module control;
  											MemWrite = 1'b0;
  											MemtoReg = 3'b001;
  											writeAddr = instruction[15:11];
-											//mux2Select[0] = 1'b0;
+											mux2Select[0] = 1'b0;
 											registerRead = 1'b1;
 											bqez = 1'b1;
-											//mux2Select[1] = zero;
+											mux2Select[1] = zero;
 											mult = 1'b0;
 											div = 1'b0;
  										 end
@@ -616,7 +623,7 @@ module control;
 											div = 1'b0;
 										 end
 		endcase
-		$display("PC=%b instruction=%h opcode=%b writeRegData=%b",PC,instruction,opcode,writeRegData);
+		$display("PC=%b instruction=%b writeRegData=%b",PC,instruction,writeRegData);
 		PC =temp_PC;
   end
 	always @ ( negedge clk ) begin
